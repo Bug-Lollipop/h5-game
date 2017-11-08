@@ -1,118 +1,142 @@
-// Create our 'main' state that will contain the game
+var game = new Phaser.Game(400, 400);
+
 var mainState = {
-    preload: function() {
-        // This function will be executed at the beginning
-        // That's where we load the images and sounds
-        game.load.image('bird', 'assets/bird.png');
-        game.load.image('pipe', 'assets/pipe.png');
-        
-    },
+  preload: function() {
+    // Load the bird sprite
+    game.load.image('bird', 'assets/bird.png');
+    game.load.image('pipe', 'assets/pipe.png');
+    game.load.audio('jump', 'assets/jump.wav');
+  },
+  create: function() {
 
-    create: function() {
-        // This function is called after the preload function
-        // Here we set up the game, display sprites, etc.
-        // Change the background color of the game to blue
-        game.stage.backgroundColor = '#71c5cf';
+    //mobile-friendly
+    if(game.device.desktop == false) {
+      // Set the scaling mode to SHOW_ALL to show all the game
+      game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+      // Set a minimum and maximum size for the game
+       // Here the minimum is half the game size
+       // And the maximum is the original game size
+      game.scale.setMinMax(game.width/2, game.height/2, game.width, game.height);
+      // Center the game horizontally and vertically
+      game.scale.pageAlignHorizontally = true;
+      game.scale.pageAlignVertically = true;
+    }
 
-        // Set the physics system
-        game.physics.startSystem(Phaser.Physics.ARCADE);
-        
-        // 创建一个组 存放管道
-        this.pipes = game.add.group(); 
-        this.pipes.enableBody = true;
-        
-        // Display the bird at the position x=100 and y=245
-        this.bird = game.add.sprite(100, 245, 'bird');
+   // Call the 'jump' function when we tap/click on the screen
+   game.input.onDown.add(this.jump, this);
 
-        // Add physics to the bird
-        // Needed for: movements, gravity, collisions, etc.
-        game.physics.arcade.enable(this.bird);
+    this.jumpSound = game.add.audio('jump');
+      
+    // Change the background color of the game to blue
+    game.stage.backgroundColor = "#71c5cf";
+    
+    // Set the physics system
+    game.physics.startSystem(Phaser.Physics.ARCADE);
+    
+    // Display the bird at the position x=100 and y=245
+    this.bird = game.add.sprite(100, 245, 'bird');
+    this.bird.anchor.setTo(-0.2, 0.5);
+      
+    // Create an empty group
+    this.pipes = game.add.group();
+    
+    // Add physics to the bird
+    // Needed for: movements, gravity, collisions, etc.
+    game.physics.arcade.enable(this.bird);
+      
+    // Add gravity to the bird to make it fall
+    this.bird.body.gravity.y = 1000;
 
-        // Add gravity to the bird to make it fall
-        this.bird.body.gravity.y = 1000;
+    // Call the 'jump' function when the spacekey is hit
+    var spaceKey = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+    spaceKey.onDown.add(this.jump, this);
 
-        // Call the 'jump' function when the spacekey is hit
-        var spaceKey = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-        spaceKey.onDown.add(this.jump, this);
-        
-        // call addRowOfPipes every 1.5 seconds
-        this.timer = game.time.events.loop(1500, this.addRowOfPipes, this);
-        
-        this.score = 0;
-        this.labelScore = game.add.text(20, 20, "0", 
-            { font: "30px Arial", fill: "#ffffff" }); 
-        },
+    this.timer = game.time.events.loop(1500, this.addRowOfPipes, this);
 
-    update: function() {
-        // This function is called 60 times per second
-        // It contains the game's logic
-        // If the bird is out of the screen (too high or too low)
-        // Call the 'restartGame' function
-        if (this.bird.y < 0 || this.bird.y > 490)
-            this.restartGame();
-        if (this.bird.angle < 20)
-            this.bird.angle += 1; 
-        game.physics.arcade.overlap(this.bird, this.pipes, this.restartGame, null, this);
-        },
-    // Make the bird jump 
-    jump: function() {
-        // Add a vertical velocity to the bird
-        this.bird.body.velocity.y = -350;
-    },
+    //scoring
+    this.score = 0;
+    this.labelScore = game.add.text(20, 20, "0", {font: "30px Arial", fill: "#fff"});
 
-    // Restart the game
-    restartGame: function() {
-        // Start the 'main' state, which restarts the game
-        game.state.start('main');
-        // Create an animation on the bird
-        var animation = game.add.tween(this.bird);
+  },
+  update: function() {
+    
+    if(this.bird.angle < 20) this.bird.angle += 1;
 
-        // Change the angle of the bird to -20° in 100 milliseconds
-        animation.to({angle: -20}, 100);
+    // If the bird is out of the screen (too high or too low)
+    // Call the 'restartGame' function
+    if( this.bird.y < 0 || this.bird.y > 490) this.restartGame();
 
-        // And start the animation
-        animation.start(); 
-    },
-    // Add a pipe
-    addOnePipe: function(x, y) {
-        // Create a pipe at the position x and y
-        var pipe = game.add.sprite(x, y, 'pipe');
+    // restart if you hit pipe
+    game.physics.arcade.overlap(this.bird, this.pipes, this.hitPipe, null, this);
+  },
+  // Make the bird jump 
+  jump: function() {
+    if(this.bird.alive == false) return;
+    // Add a vertical velocity to the bird
+    this.bird.body.velocity.y = -350;
+    var animation = game.add.tween(this.bird);
+      
+    // Change the angle of the bird to -20° in 100 milliseconds
+     animation.to({angle: -20}, 100);
+    // animation.start();
+    //shortened above
+    game.add.tween(this.bird).to({angle: -20}, 100).start();
 
-        // Add the pipe to our previously created group
-        this.pipes.add(pipe);
+    this.jumpSound.play();
+  },
+  // Restart the game
+  restartGame: function() {
+    // Start the 'main' state, which restarts the game
+    game.state.start('main');
+  },
+  addOnePipe: function(x, y) {
+    // Create a pipe at the position x and y
+    var pipe = game.add.sprite(x, y, 'pipe');
+      
+    // Add the pipe to our previously created group
+    this.pipes.add(pipe);
+      
+    // Enable physics on the pipe 
+    game.physics.arcade.enable(pipe);
+      
+    // Add velocity to the pipe to make it move left
+    pipe.body.velocity.x = -200;
+    
+    // Automatically kill the pipe when it's no longer visible 
+    pipe.checkWorldBounds = true;
+    pipe.outOfBoundsKill = true;
+  },
+  addRowOfPipes: function() {
+    // Randomly pick a number between 1 and 5
+    // This will be the hole position
+    var hole = Math.floor(Math.random() * 5) + 1;
+      
+    // Add the 6 pipes 
+    // With one big hole at position 'hole' and 'hole + 1'
+    for(var i = 0; i < 8; i++) if (i != hole && i != hole + 1) this.addOnePipe(400, i * 60 + 10);
 
-        // Enable physics on the pipe 
-        game.physics.arcade.enable(pipe);
+    //increase score
+    this.score += 1;
+    this.labelScore.text = this.score;
 
-        // Add velocity to the pipe to make it move left 移动速度
-        pipe.body.velocity.x = -200; 
+  },
+  hitPipe: function() {
+    //if bird has already hit a pope, do nothing
+    // it means the bird is already falling off-screen
+    if(this.bird.alive == false) return;
 
-        // Automatically kill the pipe when it's no longer visible 
-        // 当管道不可见的时候关闭管道
-        pipe.checkWorldBounds = true;
-        pipe.outOfBoundsKill = true;
-    },
-    addRowOfPipes: function() {
-        // Randomly pick a number between 1 and 5
-        // This will be the hole position
-        // 建立一个 1 ~ 5 的随机数，来随机断开管道，建立缝隙
-        var hole = Math.floor(Math.random() * 5) + 1;
-        console.log('hole', hole);
-        // Add the 6 pipes 
-        // With one big hole at position 'hole' and 'hole + 1'
-        // 在 hole,hole + 1 的位置创建缝隙 确定管道的位置
-        for (var i = 0; i < 8; i++)
-            if (i != hole && i != hole + 1)  this.addOnePipe(400, i * 60 + 10);  
-        this.score += 1;
-        this.labelScore.text = this.score;  
-    },
+    //set alive property of bird to false
+    this.bird.alive = false;
+
+    //prevent new pipes from appearing
+    game.time.events.remove(this.timer);
+
+    //go through all pipes, stop movement
+    this.pipes.forEach(function(p) {
+      p.body.velocity.x = 0;
+    }, this);
+  }
 };
 
-// Initialize Phaser, and create a 400px by 490px game
-var game = new Phaser.Game(400, 490);
-
-// Add the 'mainState' and call it 'main'
 game.state.add('main', mainState);
-
-// Start the state to actually start the game
 game.state.start('main');
