@@ -1,0 +1,26 @@
+{
+  "name": "h5-game",
+  "version": "1.0.0",
+  "description": "h5-game",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "dev": "webpack-dev-server --devtool eval --progress --colors --hot --content-base build",
+    "watch": "webpack --progress --colors --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Bug-Lollipop/h5-game.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bug-Lollipop/h5-game/issues"
+  },
+  "homepage": "https://github.com/Bug-Lollipop/h5-game#readme",
+  "devDependencies": {
+    "webpack": "^3.8.1",
+    "webpack-dev-server": "^2.9.4"
+  }
+}
